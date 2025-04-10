@@ -1,0 +1,6 @@
+".\Objects\main.obj",
+".\Objects\onewire.obj",
+".\Objects\Seg.obj",
+".\Objects\Init.obj" 
+TO ".\Objects\A" 
+PRINT(".\Listings\A.m51") RAMSIZE(256) 
