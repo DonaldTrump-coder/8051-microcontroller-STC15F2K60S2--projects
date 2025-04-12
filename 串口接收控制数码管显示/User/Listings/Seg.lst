@@ -1,0 +1,49 @@
+C51 COMPILER V9.59.0.0   SEG                                                               04/12/2025 21:06:02 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE SEG
+OBJECT MODULE PLACED IN .\Objects\Seg.obj
+COMPILER INVOKED BY: D:\Desktop\LanqiaoCup\DP2025_SCM\Tools\KeilC51\C51\BIN\C51.EXE ..\Driver\Seg.c OPTIMIZE(8,SPEED) BR
+                    -OWSE INCDIR(..\Driver) DEBUG OBJECTEXTEND PRINT(.\Listings\Seg.lst) OBJECT(.\Objects\Seg.obj)
+
+line level    source
+
+   1          #include <STC15F2K60S2.H>
+   2          #include "Seg.h"
+   3          
+   4          unsigned char duan[]={0xC0,0xF9,0xA4,0xB0,0x99,0x92,0x82,0xF8,0x80,0x90,0xFF,0x88,0x86};
+   5          //                    0    1    2    3    4    5    6    7    8    9    空   A    E
+   6          
+   7          unsigned char wei[]={0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80};
+   8          
+   9          void Seg_show(unsigned char add,unsigned char val)
+  10          {
+  11   1              P0=duan[10];
+  12   1              P2 &= 0x1F;
+  13   1              P2 |= 0xE0;
+  14   1              P2 &= 0x1F;
+  15   1              
+  16   1              P0=wei[add];
+  17   1              P2 &= 0x1F;
+  18   1              P2 |= 0xC0;
+  19   1              P2 &= 0x1F;
+  20   1              
+  21   1              P0=duan[val];
+  22   1              P2 &= 0x1F;
+  23   1              P2 |= 0xE0;
+  24   1              P2 &= 0x1F;
+  25   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     45    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     21    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
