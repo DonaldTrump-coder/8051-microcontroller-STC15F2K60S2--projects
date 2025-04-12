@@ -1,0 +1,81 @@
+C51 COMPILER V9.59.0.0   MAIN                                                              04/12/2025 11:44:26 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\Desktop\LanqiaoCup\DP2025_SCM\Tools\KeilC51\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE INCD
+                    -IR(..\Driver) DEBUG OBJECTEXTEND PRINT(.\Listings\main.lst) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <STC15F2K60S2.H>
+   2          #include "Seg.h"
+   3          #include "iic.h"
+   4          #include "init.h"
+   5          
+   6          unsigned char Seg_buf[]={11,10,10,10,10,10,10,10};
+   7          unsigned char Seg_index=0;
+   8          unsigned char Seg_counter=0;
+   9          unsigned char voltage_counter=0;
+  10          unsigned char voltage_A;
+  11          unsigned int vol;
+  12          float voltage;
+  13          
+  14          void Seg_proc()
+  15          {
+  16   1              if(Seg_counter>=2)
+  17   1              {
+  18   2                      Seg_counter=0;
+  19   2                      Seg_index++;
+  20   2                      if(Seg_index==8)
+  21   2                              Seg_index=0;
+  22   2                      Seg_show(Seg_index,Seg_buf[Seg_index]);
+  23   2              }
+  24   1      }
+  25          
+  26          void Other_proc()
+  27          {
+  28   1              if(voltage_counter>=1)
+  29   1              {
+  30   2                      voltage_counter=0;
+  31   2                      voltage_A=AD_read(0x43);
+  32   2                      voltage=((float)voltage_A)/51.0;
+  33   2                      vol=(int)(voltage*100);
+  34   2                      Seg_buf[5]=(vol/100)%10;
+  35   2                      Seg_buf[6]=(vol/10)%10;
+  36   2                      Seg_buf[7]=vol%10;
+  37   2              }
+  38   1      }
+  39          
+  40          void Timer0_Routine() interrupt 1
+  41          {
+  42   1              Seg_counter++;
+  43   1              voltage_counter++;
+  44   1      }
+  45          
+  46          void main()
+  47          {
+  48   1              System_init();
+  49   1              Timer0_Init();
+  50   1              while(1)
+  51   1              {
+  52   2                      Seg_proc();
+  53   2                      Other_proc();
+  54   2              }
+C51 COMPILER V9.59.0.0   MAIN                                                              04/12/2025 11:44:26 PAGE 2   
+
+  55   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    176    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     18    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
