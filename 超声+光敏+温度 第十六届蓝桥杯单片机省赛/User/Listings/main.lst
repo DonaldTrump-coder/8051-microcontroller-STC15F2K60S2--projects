@@ -1,0 +1,369 @@
+C51 COMPILER V9.59.0.0   MAIN                                                              04/13/2025 13:30:26 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\Desktop\LanqiaoCup\DP2025_SCM\Tools\KeilC51\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE INCD
+                    -IR(..\Driver) DEBUG OBJECTEXTEND PRINT(.\Listings\main.lst) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <STC15F2K60S2.H>
+   2          #include "LED.h"
+   3          #include "init.h"
+   4          #include "Seg.h"
+   5          #include "Key.h"
+   6          #include "iic.h"
+   7          #include "onewire.h"
+   8          #include "Relay.h"
+   9          #include "superwave.h"
+  10          
+  11          unsigned int temperature;
+  12          unsigned char light;
+  13          float light_voltage;
+  14          unsigned char light_degree;
+  15          unsigned char Seg_mode=0;
+  16          unsigned char Seg_buf0[]={11,10,10,10,10,10,12,10};//环境状态
+  17          unsigned char Seg_buf1[]={13,10,10,10,10,10,10,10};//运动检测
+  18          unsigned char Seg_buf2[]={14,11,10,10,10,10,10,10};//温度参数设置
+  19          unsigned char Seg_buf3[]={12,11,10,10,10,10,10,10};//统计数据
+  20          unsigned char Seg_buf5[]={14,13,10,10,10,10,10,10};//距离参数设置
+  21          unsigned char Seg_index=0;
+  22          unsigned char Seg_counter=0;
+  23          unsigned int wave_counter=0;
+  24          unsigned char Key_counter=0;
+  25          unsigned char Key_value=0;
+  26          unsigned char last_key=0;
+  27          unsigned char Key_down=0;
+  28          unsigned char Key_up=0;
+  29          bit status_lock=0;
+  30          unsigned char temperature_set=30;
+  31          unsigned char distance_set=30;
+  32          unsigned int Relay_time=0;
+  33          unsigned char Other_counter=0;
+  34          bit near=0;bit high=0;
+  35          
+  36          unsigned char motion=1;
+  37          unsigned char last_motion=1;
+  38          unsigned int motion_lock_3s=0;
+  39          unsigned int distance[2]={0,0};
+  40          unsigned int delta=0;
+  41          
+  42          bit lightingLED=0;
+  43          
+  44          unsigned int timer1s=0;
+  45          
+  46          unsigned char LED_counter=0;
+  47          
+  48          bit Relay_last=0;
+  49          
+  50          void Delay750ms(void)   //@12.000MHz
+  51          {
+  52   1              unsigned char data i, j, k;
+  53   1      
+  54   1              i = 35;
+C51 COMPILER V9.59.0.0   MAIN                                                              04/13/2025 13:30:26 PAGE 2   
+
+  55   1              j = 51;
+  56   1              k = 182;
+  57   1              do
+  58   1              {
+  59   2                      do
+  60   2                      {
+  61   3                              while (--k);
+  62   3                      } while (--j);
+  63   2              } while (--i);
+  64   1      }
+  65          
+  66          void Delay2s(void)      //@12.000MHz
+  67          {
+  68   1              unsigned char data i, j;
+  69   1              unsigned int k=2000;
+  70   1              while(k--)
+  71   1              {
+  72   2                      i = 12;
+  73   2                      j = 169;
+  74   2                      do
+  75   2                      {
+  76   3                              while (--j);
+  77   3                      } while (--i);
+  78   2              }
+  79   1      }
+  80          
+  81          void Key_proc()
+  82          {
+  83   1              if(timer1s>=100)
+  84   1              {
+  85   2                      timer1s=0;
+  86   2                      lightingLED=~lightingLED;
+  87   2              }
+  88   1              
+  89   1              if(Key_counter>=15)
+  90   1              {
+  91   2                      Key_value=get_key();
+  92   2                      Key_down=Key_value & (Key_value ^ last_key);
+  93   2                      Key_up=(~Key_value) & (Key_value ^ last_key);
+  94   2                      last_key=Key_value;
+  95   2                      
+  96   2                      if(Seg_mode==2|Seg_mode==5)status_lock=1;
+  97   2                      else status_lock=0;
+  98   2                      
+  99   2                      if(Key_down==4)
+ 100   2                      {
+ 101   3                              Seg_mode++;
+ 102   3                              if(Seg_mode==4)Seg_mode=0;
+ 103   3                              if(Seg_mode==6)Seg_mode=3;
+ 104   3                      }
+ 105   2                      
+ 106   2                      if(Key_down==5)
+ 107   2                      {
+ 108   3                              if(Seg_mode==2)Seg_mode=5;
+ 109   3                              else if(Seg_mode==5)Seg_mode=2;
+ 110   3                      }
+ 111   2                      
+ 112   2                      if(Key_down==8)
+ 113   2                      {
+ 114   3                              if(Seg_mode==2)
+ 115   3                              {
+ 116   4                                      temperature_set++;
+C51 COMPILER V9.59.0.0   MAIN                                                              04/13/2025 13:30:26 PAGE 3   
+
+ 117   4                                      if(temperature_set>80)temperature_set=20;
+ 118   4                              }
+ 119   3                              if(Seg_mode==5)
+ 120   3                              {
+ 121   4                                      distance_set+=5;
+ 122   4                                      if(distance_set>80)distance_set=20;
+ 123   4                              }
+ 124   3                      }
+ 125   2                      
+ 126   2                      if(Key_down==9)
+ 127   2                      {
+ 128   3                              if(Seg_mode==2)
+ 129   3                              {
+ 130   4                                      temperature_set--;
+ 131   4                                      if(temperature_set<20)temperature_set=80;
+ 132   4                              }
+ 133   3                              if(Seg_mode==5)
+ 134   3                              {
+ 135   4                                      distance_set-=5;
+ 136   4                                      if(distance_set<20)distance_set=80;
+ 137   4                              }
+ 138   3                      }
+ 139   2                      
+ 140   2                      if(Key_down==20)
+ 141   2                      {
+ 142   3                              Delay2s();
+ 143   3                              if(Key_value==20)
+ 144   3                              {
+ 145   4                                      Relay_time=0;
+ 146   4                              }
+ 147   3                      }
+ 148   2              }
+ 149   1      }
+ 150          
+ 151          void Seg_proc()
+ 152          {
+ 153   1              if(Seg_counter>=1)
+ 154   1              {
+ 155   2                      Seg_counter=0;
+ 156   2                      Seg_index++;
+ 157   2                      if(Seg_index==8)
+ 158   2                              Seg_index=0;
+ 159   2                      switch(Seg_mode)
+ 160   2                      {
+ 161   3                              case 0:Seg_show(Seg_index,Seg_buf0[Seg_index]);break;
+ 162   3                              case 1:Seg_show(Seg_index,Seg_buf1[Seg_index]);break;
+ 163   3                              case 2:Seg_show(Seg_index,Seg_buf2[Seg_index]);break;
+ 164   3                              case 3:Seg_show(Seg_index,Seg_buf3[Seg_index]);break;
+ 165   3                              case 5:Seg_show(Seg_index,Seg_buf5[Seg_index]);break;
+ 166   3                      }
+ 167   2                      
+ 168   2                      Seg_buf0[1]=temperature/10;
+ 169   2                      Seg_buf0[2]=temperature%10;
+ 170   2                      Seg_buf0[7]=light_degree;
+ 171   2                      Seg_buf1[1]=motion;
+ 172   2                      Seg_buf1[5]=(unsigned char)(distance[1]/100);
+ 173   2                      Seg_buf1[6]=(unsigned char)((distance[1]/10)%10);
+ 174   2                      Seg_buf1[7]=(unsigned char)(distance[1]%10);
+ 175   2                      Seg_buf2[6]=temperature_set/10;
+ 176   2                      Seg_buf2[7]=temperature_set%10;
+ 177   2                      Seg_buf5[6]=distance_set/10;
+ 178   2                      Seg_buf5[7]=distance_set%10;
+C51 COMPILER V9.59.0.0   MAIN                                                              04/13/2025 13:30:26 PAGE 4   
+
+ 179   2                      Seg_buf3[4]=(unsigned char)(Relay_time/1000);if(Seg_buf3[4]==0)Seg_buf3[4]=10;
+ 180   2                      Seg_buf3[5]=(unsigned char)((Relay_time/100)%10);if(Seg_buf3[5]==0)Seg_buf3[5]=10;
+ 181   2                      Seg_buf3[6]=(unsigned char)((Relay_time/10)%10);if(Seg_buf3[6]==0)Seg_buf3[6]=10;
+ 182   2                      Seg_buf3[7]=(unsigned char)(Relay_time%10);
+ 183   2              }
+ 184   1      }
+ 185          
+ 186          void Other_proc()
+ 187          {
+ 188   1              if(LED_counter>=10)
+ 189   1              {
+ 190   2                      if(Seg_mode!=2 &&Seg_mode!=5)
+ 191   2                      {
+ 192   3                              if(near==0)
+ 193   3                              {
+ 194   4                                      LED_show(1,0);
+ 195   4                                      LED_show(2,0);
+ 196   4                                      LED_show(3,0);
+ 197   4                                      LED_show(4,0);
+ 198   4                              }
+ 199   3                              else
+ 200   3                              {
+ 201   4                                      switch(light_degree)
+ 202   4                                      {
+ 203   5                                              case 1:LED_show(1,1);
+ 204   5                                                         LED_show(2,0);
+ 205   5                                                         LED_show(3,0);
+ 206   5                                                         LED_show(4,0);break;
+ 207   5                                              case 2:LED_show(1,1);
+ 208   5                                                         LED_show(2,1);
+ 209   5                                                         LED_show(3,0);
+ 210   5                                                         LED_show(4,0);break;
+ 211   5                                              case 3:LED_show(1,1);
+ 212   5                                                         LED_show(2,1);
+ 213   5                                                         LED_show(3,1);
+ 214   5                                                         LED_show(4,0);break;
+ 215   5                                              case 4:LED_show(1,1);
+ 216   5                                                         LED_show(2,1);
+ 217   5                                                         LED_show(3,1);
+ 218   5                                                         LED_show(4,1);break;
+ 219   5                                      }
+ 220   4                              }
+ 221   3                              
+ 222   3                              if(motion==1)
+ 223   3                                      LED_show(8,0);
+ 224   3                              if(motion==2)
+ 225   3                                      LED_show(8,1);
+ 226   3                              if(motion==3 && lightingLED==1)
+ 227   3                                      LED_show(8,1);
+ 228   3                              else if(motion==3 && lightingLED==0)
+ 229   3                                      LED_show(8,0);
+ 230   3                      }
+ 231   2              }
+ 232   1              if(motion_lock_3s>=3000)
+ 233   1              {
+ 234   2                      motion_lock_3s=0;
+ 235   2                      if(status_lock==1)
+ 236   2                              status_lock=0;
+ 237   2              }
+ 238   1              
+ 239   1              if(Other_counter>=50)
+ 240   1              {
+C51 COMPILER V9.59.0.0   MAIN                                                              04/13/2025 13:30:26 PAGE 5   
+
+ 241   2                      Other_counter=0;
+ 242   2                      temperature=(unsigned int)get_temperature();
+ 243   2                      if(temperature>temperature_set)high=1;
+ 244   2                      else high=0;
+ 245   2                      if(Seg_mode!=2 && Seg_mode!=5)
+ 246   2                      {
+ 247   3                              if(high==1 && near==1 )
+ 248   3                              {
+ 249   4                                      if(Relay_last==0)
+ 250   4                                      {
+ 251   5                                              Relay_control(1);
+ 252   5                                              Relay_last=1;
+ 253   5                                              Relay_time++;
+ 254   5                                      }
+ 255   4                              }
+ 256   3                              else
+ 257   3                              {
+ 258   4                                      if(Relay_last==1)
+ 259   4                                      {
+ 260   5                                              Relay_control(0);
+ 261   5                                              Relay_last=0;
+ 262   5                                      }
+ 263   4                              }       
+ 264   3                      }
+ 265   2                      
+ 266   2                      light=AD_read(0x41);
+ 267   2                      light_voltage=(float)(light/51.0);
+ 268   2                      if(light_voltage>=5.0)
+ 269   2                              light_degree=1;
+ 270   2                      else if(light_voltage>=2.0)
+ 271   2                              light_degree=2;
+ 272   2                      else if(light_voltage>=0.5)
+ 273   2                              light_degree=3;
+ 274   2                      else
+ 275   2                              light_degree=4;
+ 276   2              }
+ 277   1              if(wave_counter>=1000)
+ 278   1              {
+ 279   2                      wave_counter=0;
+ 280   2                      distance[0]=distance[1];
+ 281   2                      distance[1]=(unsigned int)get_distance();
+ 282   2                      if(distance[1]<distance_set)near=1;
+ 283   2                      else near=0;
+ 284   2                      
+ 285   2                      if(distance[1]>=distance[0])
+ 286   2                              delta=distance[1]-distance[0];
+ 287   2                      else
+ 288   2                              delta=distance[0]-distance[1];
+ 289   2                      if(status_lock==0)
+ 290   2                      {
+ 291   3                              if(delta<5)
+ 292   3                                      motion=1;
+ 293   3                              else if (delta<10)
+ 294   3                                      motion=2;
+ 295   3                              else
+ 296   3                                      motion=3;
+ 297   3                              
+ 298   3                              if(motion!=last_motion)
+ 299   3                              {
+ 300   4                                      motion_lock_3s=0;
+ 301   4                                      status_lock=1;
+ 302   4                                      last_motion=motion;
+C51 COMPILER V9.59.0.0   MAIN                                                              04/13/2025 13:30:26 PAGE 6   
+
+ 303   4                              }
+ 304   3                      }
+ 305   2              }
+ 306   1      }
+ 307          
+ 308          void Timer0_Routine() interrupt 1
+ 309          {
+ 310   1              Seg_counter++;
+ 311   1              Key_counter++;
+ 312   1              Other_counter++;
+ 313   1              wave_counter++;
+ 314   1              motion_lock_3s++;
+ 315   1              LED_counter++;
+ 316   1              timer1s++;
+ 317   1      }
+ 318          
+ 319          void main()
+ 320          {
+ 321   1              System_init();
+ 322   1              Timer0_Init();
+ 323   1              
+ 324   1              init_ds18b20();
+ 325   1              Write_DS18B20(0xCC);
+ 326   1              Write_DS18B20(0x44);
+ 327   1              Delay750ms();
+ 328   1              
+ 329   1              while(1)
+ 330   1              {
+ 331   2                      Seg_proc();
+ 332   2                      Key_proc();
+ 333   2                      Other_proc();
+ 334   2              }
+ 335   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1217    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     76    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      5    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

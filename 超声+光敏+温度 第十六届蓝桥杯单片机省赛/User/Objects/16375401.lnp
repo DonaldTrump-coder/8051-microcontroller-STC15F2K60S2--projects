@@ -1,0 +1,11 @@
+".\Objects\Seg.obj",
+".\Objects\Key.obj",
+".\Objects\LED.obj",
+".\Objects\iic.obj",
+".\Objects\onewire.obj",
+".\Objects\Relay.obj",
+".\Objects\init.obj",
+".\Objects\superwave.obj",
+".\Objects\main.obj" 
+TO ".\Objects\16375401" 
+PRINT(".\Listings\16375401.m51") RAMSIZE(256) 
